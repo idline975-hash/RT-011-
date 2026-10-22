@@ -1,0 +1,21 @@
+@import "tailwindcss";
+
+/* --- TAMPILAN DEFAULT (Untuk PC / Laptop) --- */
+.main-layout {
+  display: flex; /* Sidebar dan Chat berdampingan kiri-kanan */
+  flex-direction: row; 
+}
+.sidebar {
+  width: 300px; /* Sidebar pengaturan AI di kiri */
+}
+
+/* --- TAMPILAN OTOMATIS DI ANDROID / HP (Layar di bawah 768px) --- */
+@media (max-width: 768px) {
+  .main-layout {
+    flex-direction: column; /* Berubah jadi atas-bawah di Android */
+  }
+  .sidebar {
+    width: 100%; /* Sidebar jadi menu atas atau disembunyikan */
+    height: auto;
+  }
+}
