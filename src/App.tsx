@@ -42,7 +42,12 @@ import {
   RefreshCcw,
   BarChart3,
   Package,
-  HeartHandshake
+  HeartHandshake,
+  FilePlus,
+  Megaphone,
+  Mail,
+  Bookmark,
+  ChevronDown
 } from 'lucide-react';
 
 // Interfaces
@@ -247,8 +252,90 @@ const getAge = (tanggal_lahir?: string) => {
   return age < 0 ? 0 : age;
 };
 
+const JENIS_SURAT_OPTIONS = [
+  'SURAT PENGANTAR',
+  'SURAT KETERANGAN DOMISILI',
+  'SURAT KETERANGAN USAHA',
+  'SURAT KETERANGAN KELAHIRAN',
+  'SURAT KETERANGAN KEMATIAN',
+  'SURAT KETERANGAN TIDAK MAMPU',
+  'SURAT PENGANTAR SKCK',
+  'SURAT IZIN KERAMAIAN',
+  'SURAT KEHILANGAN',
+  'SURAT BEDA NAMA',
+  'SURAT PENGANTAR NIKAH'
+];
+
+const TEMPLATE_IMBAUAN_DATA: { [key: string]: { perihal: string; isi: string } } = {
+  'IMBAUAN KERJA BAKTI': {
+    perihal: 'IMBAUAN KERJA BAKTI',
+    isi: 'Sehubungan dengan upaya menjaga kebersihan dan kenyamanan lingkungan, kami mengundang seluruh warga untuk hadir dan berpartisipasi dalam kegiatan Kerja Bakti yang akan dilaksanakan pada:'
+  },
+  'IMBAUAN KEAMANAN (SISKAMLING)': {
+    perihal: 'IMBAUAN KEAMANAN (SISKAMLING)',
+    isi: 'Dalam rangka meningkatkan kewaspadaan dan ketertiban lingkungan RT, kami mengimbau seluruh warga untuk senantiasa mengunci pintu dan pagar rumah, menyalakan lampu penerangan teras di malam hari, serta berpartisipasi aktif dalam kegiatan ronda malam / poskamling.'
+  },
+  'IMBAUAN IURAN/KAS': {
+    perihal: 'IMBAUAN IURAN/KAS',
+    isi: 'Diberitahukan kepada seluruh warga bahwa pembayaran iuran kas bulanan untuk operasional keamanan, penerangan, dan kebersihan lingkungan dapat diserahkan kepada bendahara RT sebelum tanggal yang telah ditentukan.'
+  },
+  'PEMBERITAHUAN HARI BESAR': {
+    perihal: 'PEMBERITAHUAN HARI BESAR',
+    isi: 'Dalam rangka menyambut dan memperingati Hari Besar di lingkungan warga RT, kami mengundang seluruh warga untuk turut berpartisipasi dan menjaga ketertiban serta keharmonisan di lingkungan warga.'
+  },
+  'CUSTOM / KOSONG': {
+    perihal: 'IMBAUAN WARGA',
+    isi: ''
+  }
+};
+
+const FORMAT_TANDA_TANGAN_OPTIONS = [
+  'RT & Sekretaris',
+  'Ketua RT Saja',
+  'RT, RW & Sekretaris'
+];
+
 export default function App() {
-  const [activeTab, setActiveTab] = useState<'dash' | 'warga' | 'kk' | 'keuangan' | 'surat' | 'more' | 'mutasi'>('dash');
+  const [activeTab, setActiveTab] = useState<'dash' | 'warga' | 'kk' | 'keuangan' | 'surat' | 'more' | 'mutasi' | 'cetak-surat'>('dash');
+  
+  // State Khusus Fitur Cetak Surat
+  const [cetakSuratSubTab, setCetakSuratSubTab] = useState<'warga' | 'imbauan' | 'pengaturan'>('warga');
+  const [suratJenis, setSuratJenis] = useState<string>('SURAT PENGANTAR');
+  const [showJenisSuratDropdown, setShowJenisSuratDropdown] = useState<boolean>(false);
+  const [selectedPemohon, setSelectedPemohon] = useState<Resident | null>(null);
+  const [keperluanSurat, setKeperluanSurat] = useState<string>('');
+  const [showWargaPicker, setShowWargaPicker] = useState<boolean>(false);
+  const [wargaPickerSearch, setWargaPickerSearch] = useState<string>('');
+  const [draftList, setDraftList] = useState<Array<{ id: string; jenis: string; pemohonNama: string; pemohonNik: string; keperluan: string; tanggal: string }>>([
+    {
+      id: 'd1',
+      jenis: 'SURAT PENGANTAR',
+      pemohonNama: 'Budi Santoso',
+      pemohonNik: '3275011001850001',
+      keperluan: 'Persyaratan perpanjangan SIM A/C',
+      tanggal: '2026-10-21'
+    }
+  ]);
+  const [showDraftModal, setShowDraftModal] = useState<boolean>(false);
+  const [showInOutModal, setShowInOutModal] = useState<boolean>(false);
+  const [showSuratPreviewModal, setShowSuratPreviewModal] = useState<boolean>(false);
+  const [generatedLetterNumber, setGeneratedLetterNumber] = useState<string>('');
+  const [templateNamaKetua, setTemplateNamaKetua] = useState<string>('Budi Santoso');
+  
+  // State Khusus Surat Imbauan Sesuai Screenshot
+  const [kopSuratFull, setKopSuratFull] = useState<boolean>(true);
+  const [templateImbauan, setTemplateImbauan] = useState<string>('IMBAUAN KERJA BAKTI');
+  const [showTemplateImbauanDropdown, setShowTemplateImbauanDropdown] = useState<boolean>(false);
+  const [autoGenerateNomorSurat, setAutoGenerateNomorSurat] = useState<boolean>(true);
+  const [kodeWilayah, setKodeWilayah] = useState<string>('RT.01/RW.02');
+  const [formatTandaTangan, setFormatTandaTangan] = useState<string>('RT & Sekretaris');
+  const [showTandaTanganDropdown, setShowTandaTanganDropdown] = useState<boolean>(false);
+  const [perihalJudulSurat, setPerihalJudulSurat] = useState<string>('IMBAUAN KERJA BAKTI');
+  const [isiSuratImbauan, setIsiSuratImbauan] = useState<string>(
+    'Sehubungan dengan upaya menjaga kebersihan dan kenyamanan lingkungan, kami mengundang seluruh warga untuk hadir dan berpartisipasi dalam kegiatan Kerja Bakti yang akan dilaksanakan pada:'
+  );
+  const [showImbauanPreviewModal, setShowImbauanPreviewModal] = useState<boolean>(false);
+  const [generatedImbauanNumber, setGeneratedImbauanNumber] = useState<string>('');
   const [isDarkMode, setIsDarkMode] = useState<boolean>(true);
   const [rtNumber, setRtNumber] = useState<string>('011');
   const [rwNumber, setRwNumber] = useState<string>('04');
@@ -302,6 +389,7 @@ export default function App() {
   const [kkRtFilter, setKkRtFilter] = useState<string>('Semua RT');
   const [kkSortOrder, setKkSortOrder] = useState<string>('Terbaru');
   const [showMoreLainnyaModal, setShowMoreLainnyaModal] = useState<boolean>(false);
+  const [isSidebarMenuOpen, setIsSidebarMenuOpen] = useState<boolean>(false);
   const [mutations, setMutations] = useState<MutationRecord[]>([]);
   const [mutationSearch, setMutationSearch] = useState<string>('');
   const [showAddMutationModal, setShowAddMutationModal] = useState<boolean>(false);
@@ -434,39 +522,300 @@ export default function App() {
     alert('Permohonan surat berhasil dikirim ke pengurus RT!');
   };
 
+  const handleSaveDraft = () => {
+    if (!keperluanSurat && !selectedPemohon) {
+      alert('Silakan pilih warga atau isi keperluan sebelum menyimpan draft.');
+      return;
+    }
+    const newDraft = {
+      id: 'drf_' + Date.now(),
+      jenis: suratJenis,
+      pemohonNama: selectedPemohon?.nama || 'Warga RT',
+      pemohonNik: selectedPemohon?.nik || '-',
+      keperluan: keperluanSurat || 'Persyaratan administrasi',
+      tanggal: new Date().toISOString().split('T')[0]
+    };
+    setDraftList([newDraft, ...draftList]);
+    alert('Draft surat berhasil disimpan ke tab Draft!');
+  };
+
+  const handleGeneratePreview = () => {
+    let pemohon = selectedPemohon;
+    if (!pemohon) {
+      if (residents.length > 0) {
+        pemohon = residents[0];
+        setSelectedPemohon(pemohon);
+      } else {
+        alert('Silakan pilih warga pemohon terlebih dahulu.');
+        setShowWargaPicker(true);
+        return;
+      }
+    }
+    const num = Math.floor(100 + Math.random() * 900);
+    const romanMonths = ['I','II','III','IV','V','VI','VII','VIII','IX','X','XI','XII'];
+    const month = romanMonths[new Date().getMonth()];
+    const year = new Date().getFullYear();
+    const formattedNum = `${num}/RT.${rtNumber}/RW.${rwNumber}/${month}/${year}`;
+    setGeneratedLetterNumber(formattedNum);
+    setShowSuratPreviewModal(true);
+  };
+
+  const handleGenerateImbauan = () => {
+    const num = Math.floor(100 + Math.random() * 900);
+    const romanMonths = ['I','II','III','IV','V','VI','VII','VIII','IX','X','XI','XII'];
+    const month = romanMonths[new Date().getMonth()];
+    const year = new Date().getFullYear();
+    const formattedNum = `${num}/SI/${kodeWilayah || `RT.${rtNumber}/RW.${rwNumber}`}/${month}/${year}`;
+    setGeneratedImbauanNumber(formattedNum);
+    setShowImbauanPreviewModal(true);
+  };
+
   const formatDateIndo = () => {
     const options: Intl.DateTimeFormatOptions = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
     return new Date().toLocaleDateString('id-ID', options);
   };
 
   return (
-    <div className={`min-h-screen font-sans ${isDarkMode ? 'bg-[#121212] text-gray-100' : 'bg-gray-50 text-gray-900'} pb-24 md:pb-28 transition-colors duration-200`}>
-      {/* Top Header */}
-      <header className={`sticky top-0 z-40 px-4 py-3 border-b ${isDarkMode ? 'bg-[#18181b]/90 border-gray-800 backdrop-blur-md' : 'bg-white/90 border-gray-200 backdrop-blur-md'}`}>
-        <div className="w-full max-w-md md:max-w-3xl lg:max-w-5xl xl:max-w-6xl mx-auto flex items-center justify-between">
-          <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center shadow-lg shadow-blue-500/30 text-white font-bold text-lg">
-              RT
-            </div>
-            <div>
-              <h1 className="font-bold text-base tracking-wide">RT {rtNumber} / RW {rwNumber}</h1>
-              <p className="text-xs text-gray-400">WargaKu Smart Neighborhood</p>
-            </div>
+    <div className={`min-h-screen font-sans ${isDarkMode ? 'bg-[#121212] text-gray-100' : 'bg-gray-50 text-gray-900'} transition-colors duration-200 flex flex-col md:flex-row`}>
+      {/* SIDEBAR: Berada disamping khusus di Laptop / PC (md:flex) */}
+      <aside className={`hidden md:flex flex-col w-64 lg:w-72 shrink-0 border-r sticky top-0 h-screen z-40 transition-colors ${isDarkMode ? 'bg-[#18181b] border-gray-800' : 'bg-white border-gray-200'}`}>
+        {/* Brand / Logo */}
+        <div className="p-6 border-b border-inherit flex items-center space-x-3">
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center shadow-lg shadow-blue-500/30 text-white font-bold text-lg shrink-0">
+            RT
           </div>
-
-          <div className="flex items-center space-x-2">
-            <button
-              onClick={() => setIsDarkMode(!isDarkMode)}
-              className={`p-2 rounded-xl transition ${isDarkMode ? 'bg-gray-800 text-yellow-400 hover:bg-gray-700' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
-            >
-              {isDarkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
-            </button>
+          <div className="min-w-0">
+            <h1 className="font-bold text-base tracking-wide truncate">RT {rtNumber} / RW {rwNumber}</h1>
+            <p className="text-xs text-gray-400 truncate">WargaKu Dashboard</p>
           </div>
         </div>
-      </header>
 
-      {/* Main Container - Automatis rapih di HP (max-w-md) maupun di Laptop/PC (md:max-w-3xl lg:max-w-5xl xl:max-w-6xl) */}
-      <main className="w-full max-w-md md:max-w-3xl lg:max-w-5xl xl:max-w-6xl mx-auto px-4 pt-4 space-y-4">
+        {/* Sidebar Navigation: Dashboard, Warga, KK, Kas, Menu (Berada disamping saat di laptop/PC) */}
+        <div className="flex-1 px-4 py-5 space-y-1.5 overflow-y-auto">
+          <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wider px-3 mb-2">Navigasi Utama</div>
+
+          {/* 1. Dashboard */}
+          <button
+            onClick={() => setActiveTab('dash')}
+            className={`w-full flex items-center space-x-3.5 px-4 py-3 rounded-2xl text-sm font-semibold transition ${
+              activeTab === 'dash'
+                ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30'
+                : isDarkMode
+                ? 'text-gray-300 hover:bg-gray-800/70 hover:text-white'
+                : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+            }`}
+          >
+            <Home className="w-5 h-5 shrink-0" />
+            <span>Dashboard</span>
+          </button>
+
+          {/* 2. Warga */}
+          <button
+            onClick={() => setActiveTab('warga')}
+            className={`w-full flex items-center space-x-3.5 px-4 py-3 rounded-2xl text-sm font-semibold transition ${
+              activeTab === 'warga'
+                ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30'
+                : isDarkMode
+                ? 'text-gray-300 hover:bg-gray-800/70 hover:text-white'
+                : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+            }`}
+          >
+            <Users className="w-5 h-5 shrink-0" />
+            <div className="flex-1 flex justify-between items-center text-left">
+              <span>Data Warga</span>
+              <span className={`text-xs px-2 py-0.5 rounded-full font-bold ${activeTab === 'warga' ? 'bg-blue-500 text-white' : 'bg-gray-700/40 text-gray-300'}`}>
+                {residents.length}
+              </span>
+            </div>
+          </button>
+
+          {/* 3. KK */}
+          <button
+            onClick={() => setActiveTab('kk')}
+            className={`w-full flex items-center space-x-3.5 px-4 py-3 rounded-2xl text-sm font-semibold transition ${
+              activeTab === 'kk'
+                ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30'
+                : isDarkMode
+                ? 'text-gray-300 hover:bg-gray-800/70 hover:text-white'
+                : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+            }`}
+          >
+            <FileText className="w-5 h-5 shrink-0" />
+            <span>Kartu Keluarga</span>
+          </button>
+
+          {/* 4. Kas */}
+          <button
+            onClick={() => setActiveTab('keuangan')}
+            className={`w-full flex items-center space-x-3.5 px-4 py-3 rounded-2xl text-sm font-semibold transition ${
+              activeTab === 'keuangan'
+                ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30'
+                : isDarkMode
+                ? 'text-gray-300 hover:bg-gray-800/70 hover:text-white'
+                : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+            }`}
+          >
+            <Wallet className="w-5 h-5 shrink-0" />
+            <span>Keuangan Kas</span>
+          </button>
+
+          {/* 5. Menu Lainnya (Dropdown di PC / Modal di HP) */}
+          <div className="space-y-1">
+            <button
+              onClick={() => setIsSidebarMenuOpen(!isSidebarMenuOpen)}
+              className={`w-full flex items-center justify-between px-4 py-3 rounded-2xl text-sm font-semibold transition ${
+                isSidebarMenuOpen
+                  ? 'bg-blue-600/10 text-blue-500 border border-blue-500/20'
+                  : isDarkMode
+                  ? 'text-gray-300 hover:bg-gray-800/70 hover:text-white'
+                  : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+              }`}
+            >
+              <div className="flex items-center space-x-3.5 min-w-0">
+                <Menu className="w-5 h-5 shrink-0" />
+                <span className="truncate">Menu Lainnya</span>
+              </div>
+              <ChevronDown className={`w-4 h-4 transition-transform duration-300 ${isSidebarMenuOpen ? 'rotate-180' : ''}`} />
+            </button>
+
+            {/* Submenu Dropdown (Khusus PC/Laptop di dalam Sidebar) */}
+            {isSidebarMenuOpen && (
+              <div className="pl-4 pr-2 py-1 space-y-1 animate-fade-in border-l border-gray-800 ml-6 mt-1">
+                <button
+                  onClick={() => setActiveTab('mutasi')}
+                  className={`w-full flex items-center space-x-3 px-3 py-2 rounded-xl text-xs font-medium transition ${activeTab === 'mutasi' ? 'bg-blue-600/20 text-blue-400' : 'text-gray-400 hover:bg-gray-800/50 hover:text-gray-200'}`}
+                >
+                  <RefreshCcw className="w-3.5 h-3.5" />
+                  <span>Riwayat Mutasi</span>
+                </button>
+                <button
+                  onClick={() => setActiveTab('surat')}
+                  className={`w-full flex items-center space-x-3 px-3 py-2 rounded-xl text-xs font-medium transition ${activeTab === 'surat' ? 'bg-emerald-600/20 text-emerald-400' : 'text-gray-400 hover:bg-gray-800/50 hover:text-gray-200'}`}
+                >
+                  <FileText className="w-3.5 h-3.5" />
+                  <span>Surat Pengantar</span>
+                </button>
+                <button
+                  onClick={() => { setActiveTab('cetak-surat'); setCetakSuratSubTab('warga'); }}
+                  className={`w-full flex items-center space-x-3 px-3 py-2 rounded-xl text-xs font-medium transition ${activeTab === 'cetak-surat' ? 'bg-purple-600/20 text-purple-400' : 'text-gray-400 hover:bg-gray-800/50 hover:text-gray-200'}`}
+                >
+                  <Printer className="w-3.5 h-3.5" />
+                  <span>Cetak Surat</span>
+                </button>
+                <button
+                  onClick={() => setActiveTab('dash')}
+                  className={`w-full flex items-center space-x-3 px-3 py-2 rounded-xl text-xs font-medium transition ${activeTab === 'dash' ? 'bg-teal-600/20 text-teal-400' : 'text-gray-400 hover:bg-gray-800/50 hover:text-gray-200'}`}
+                >
+                  <BarChart3 className="w-3.5 h-3.5" />
+                  <span>Laporan Statistik</span>
+                </button>
+                <button
+                  onClick={() => alert(`Modul Inventaris & Aset RT ${rtNumber}`)}
+                  className="w-full flex items-center space-x-3 px-3 py-2 rounded-xl text-xs font-medium text-gray-400 hover:bg-gray-800/50 hover:text-gray-200 transition"
+                >
+                  <Package className="w-3.5 h-3.5" />
+                  <span>Inventaris Aset</span>
+                </button>
+                <button
+                  onClick={() => alert(`Modul Bantuan Sosial (Bansos) Warga RT ${rtNumber}`)}
+                  className="w-full flex items-center space-x-3 px-3 py-2 rounded-xl text-xs font-medium text-gray-400 hover:bg-gray-800/50 hover:text-gray-200 transition"
+                >
+                  <HeartHandshake className="w-3.5 h-3.5" />
+                  <span>Bantuan Sosial</span>
+                </button>
+                <button
+                  onClick={() => alert(`Log Aktivitas Sistem WargaKu RT ${rtNumber}`)}
+                  className="w-full flex items-center space-x-3 px-3 py-2 rounded-xl text-xs font-medium text-gray-400 hover:bg-gray-800/50 hover:text-gray-200 transition"
+                >
+                  <FileText className="w-3.5 h-3.5" />
+                  <span>Log Aktivitas</span>
+                </button>
+                <button
+                  onClick={() => setActiveTab('more')}
+                  className={`w-full flex items-center space-x-3 px-3 py-2 rounded-xl text-xs font-medium transition ${activeTab === 'more' ? 'bg-slate-600/20 text-slate-400' : 'text-gray-400 hover:bg-gray-800/50 hover:text-gray-200'}`}
+                >
+                  <Settings className="w-3.5 h-3.5" />
+                  <span>Pengaturan RT</span>
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Sidebar Footer */}
+        <div className="p-4 border-t border-inherit">
+          <div className="flex items-center justify-between">
+            <button
+              onClick={() => setIsDarkMode(!isDarkMode)}
+              className={`flex items-center space-x-2 px-3 py-2 rounded-xl text-xs font-semibold transition ${
+                isDarkMode ? 'bg-gray-800 text-yellow-400 hover:bg-gray-700' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+            >
+              {isDarkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+              <span>{isDarkMode ? 'Mode Terang' : 'Mode Gelap'}</span>
+            </button>
+            <span className="text-[11px] text-gray-400 font-medium">RT {rtNumber}</span>
+          </div>
+        </div>
+      </aside>
+
+      {/* KONTEN KANAN / UTAMA (Berdampingan dengan Sidebar di PC/Laptop) */}
+      <div className="flex-1 flex flex-col min-w-0">
+        {/* Top Header */}
+        <header className={`sticky top-0 z-30 px-4 py-3 border-b ${isDarkMode ? 'bg-[#18181b]/90 border-gray-800 backdrop-blur-md' : 'bg-white/90 border-gray-200 backdrop-blur-md'}`}>
+          <div className="w-full max-w-md md:max-w-5xl mx-auto flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              {/* Logo di HP (disembunyikan di PC karena sudah ada di sidebar) */}
+              <div className="md:hidden w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center shadow-lg shadow-blue-500/30 text-white font-bold text-lg shrink-0">
+                RT
+              </div>
+              <div>
+                <h1 className="font-bold text-base tracking-wide">
+                  <span className="md:hidden">RT {rtNumber} / RW {rwNumber}</span>
+                  <span className="hidden md:inline">
+                    {activeTab === 'dash' && 'Dashboard Statistik & Ikhtisar'}
+                    {activeTab === 'warga' && `Data Warga RT ${rtNumber} / RW ${rwNumber}`}
+                    {activeTab === 'kk' && 'Data Kartu Keluarga (KK)'}
+                    {activeTab === 'keuangan' && 'Laporan Keuangan Kas Lingkungan'}
+                    {activeTab === 'surat' && 'Administrasi & Pengajuan Surat'}
+                    {activeTab === 'cetak-surat' && 'Form Pembuatan & Cetak Surat'}
+                    {activeTab === 'mutasi' && 'Riwayat Mutasi Penduduk'}
+                    {activeTab === 'more' && 'Pengaturan & Konfigurasi RT'}
+                  </span>
+                </h1>
+                <p className="text-xs text-gray-400">
+                  <span className="md:hidden">WargaKu Smart Neighborhood</span>
+                  <span className="hidden md:inline">RT {rtNumber} / RW {rwNumber} • Sistem Administrasi Lingkungan Pintar</span>
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center space-x-2">
+              {/* Menu Lainnya Button di Header HP */}
+              <button
+                onClick={() => setShowMoreLainnyaModal(true)}
+                className={`md:hidden flex items-center space-x-1.5 px-3 py-2 rounded-xl text-xs font-bold transition ${
+                  isDarkMode
+                    ? 'bg-gray-800 text-gray-200 hover:bg-gray-700'
+                    : 'bg-gray-100 text-gray-800 hover:bg-gray-200'
+                }`}
+              >
+                <Menu className="w-4 h-4" />
+                <span>Menu</span>
+              </button>
+              <button
+                onClick={() => setIsDarkMode(!isDarkMode)}
+                className={`p-2 rounded-xl transition ${isDarkMode ? 'bg-gray-800 text-yellow-400 hover:bg-gray-700' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
+                title="Ganti Tema"
+              >
+                {isDarkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+              </button>
+            </div>
+          </div>
+        </header>
+
+        {/* Main Container */}
+        <main className="w-full max-w-md md:max-w-5xl mx-auto px-4 pt-4 pb-24 md:pb-12 space-y-4">
         
         {/* DASHBOARD TAB */}
         {activeTab === 'dash' && (
@@ -612,7 +961,7 @@ export default function App() {
                 </button>
               </div>
 
-              {/* Demographics Content - Rapi di HP & Laptop */}
+              {/* Demographics Content - Rapi di HP dan Laptop */}
               <div className="space-y-2 pt-1">
                 {demographicTab === 'statusHuni' && (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
@@ -711,7 +1060,7 @@ export default function App() {
                   <p className="text-[10px] italic mt-1">* Lihat log selengkapnya di menu Log Aktivitas</p>
                 </div>
               ) : (
-                <div className="space-y-2">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                   {announcements.slice(0, 2).map((item) => (
                     <div key={item.id} className="p-3 rounded-xl bg-gray-900/30 border border-gray-800/40 text-xs">
                       <div className="flex justify-between items-center mb-1">
@@ -721,7 +1070,7 @@ export default function App() {
                       <p className="text-gray-300 line-clamp-2">{item.isi}</p>
                     </div>
                   ))}
-                  <p className="text-[10px] text-center text-gray-400 italic pt-1">
+                  <p className="text-[10px] text-center text-gray-400 italic pt-1 col-span-full">
                     * Lihat log selengkapnya di menu Log Aktivitas
                   </p>
                 </div>
@@ -1211,6 +1560,564 @@ export default function App() {
           </div>
         )}
 
+        {/* CETAK SURAT TAB - PERSIS SESUAI GAMBAR SCREENSHOT */}
+        {activeTab === 'cetak-surat' && (
+          <div className="space-y-5 animate-fade-in pb-10">
+            {/* 3 Tombol Bulat Navigasi di Atas: Surat Warga, Surat Imbauan, Pengaturan Surat */}
+            <div className="flex justify-around items-center pt-2 pb-1 px-2">
+              {/* 1. Surat Warga */}
+              <button
+                type="button"
+                onClick={() => setCetakSuratSubTab('warga')}
+                className="flex flex-col items-center space-y-2 group"
+              >
+                <div className={`w-14 h-14 rounded-full flex items-center justify-center transition-all ${
+                  cetakSuratSubTab === 'warga'
+                    ? 'bg-[#0d9488] text-white shadow-lg shadow-teal-500/30 scale-105'
+                    : 'bg-[#27272a] text-gray-400 hover:bg-gray-700'
+                }`}>
+                  <FilePlus className="w-6 h-6" />
+                </div>
+                <span className={`text-xs font-bold tracking-tight ${
+                  cetakSuratSubTab === 'warga' ? 'text-white' : 'text-gray-400'
+                }`}>
+                  Surat Warga
+                </span>
+              </button>
+
+              {/* 2. Surat Imbauan */}
+              <button
+                type="button"
+                onClick={() => setCetakSuratSubTab('imbauan')}
+                className="flex flex-col items-center space-y-2 group"
+              >
+                <div className={`w-14 h-14 rounded-full flex items-center justify-center transition-all ${
+                  cetakSuratSubTab === 'imbauan'
+                    ? 'bg-[#0d9488] text-white shadow-lg shadow-teal-500/30 scale-105'
+                    : 'bg-[#27272a] text-gray-400 hover:bg-gray-700'
+                }`}>
+                  <Megaphone className="w-6 h-6" />
+                </div>
+                <span className={`text-xs font-bold tracking-tight ${
+                  cetakSuratSubTab === 'imbauan' ? 'text-white' : 'text-gray-400'
+                }`}>
+                  Surat Imbauan
+                </span>
+              </button>
+
+              {/* 3. Pengaturan Surat */}
+              <button
+                type="button"
+                onClick={() => setCetakSuratSubTab('pengaturan')}
+                className="flex flex-col items-center space-y-2 group"
+              >
+                <div className={`w-14 h-14 rounded-full flex items-center justify-center transition-all ${
+                  cetakSuratSubTab === 'pengaturan'
+                    ? 'bg-[#0d9488] text-white shadow-lg shadow-teal-500/30 scale-105'
+                    : 'bg-[#27272a] text-gray-400 hover:bg-gray-700'
+                }`}>
+                  <Settings className="w-6 h-6" />
+                </div>
+                <span className={`text-xs font-bold tracking-tight ${
+                  cetakSuratSubTab === 'pengaturan' ? 'text-white' : 'text-gray-400'
+                }`}>
+                  Pengaturan Surat
+                </span>
+              </button>
+            </div>
+
+            {/* TAB CONTENT: 1. SURAT WARGA (Sesuai Gambar Screenshot) */}
+            {cetakSuratSubTab === 'warga' && (
+              <div className="space-y-4">
+                {/* Header: Judul & Shortcut Buttons Draft + In & Out */}
+                <div className="flex justify-between items-start gap-3">
+                  <div className="flex-1">
+                    <h2 className="text-base sm:text-lg font-bold text-white tracking-tight">Form Pembuatan Surat</h2>
+                    <p className="text-xs text-gray-400 mt-0.5">Pilih pemohon & keperluan untuk penerbitan surat PDF</p>
+                    <p className="text-[11px] text-[#14b8a6] mt-1 leading-snug">
+                      Isi surat dapat disesuaikan melalui template. Cek tab Pengaturan Surat untuk membuat template pribadi.
+                    </p>
+                  </div>
+
+                  <div className="flex items-center space-x-2 shrink-0">
+                    {/* Draft Button */}
+                    <button
+                      type="button"
+                      onClick={() => setShowDraftModal(true)}
+                      className="w-16 h-16 rounded-2xl border border-amber-500/70 bg-[#1e1e24] hover:bg-amber-500/10 flex flex-col items-center justify-center p-2 text-amber-400 transition active:scale-95 shadow-md group"
+                      title="Lihat Daftar Draft"
+                    >
+                      <Mail className="w-6 h-6 mb-1 text-amber-400 group-hover:scale-110 transition" />
+                      <span className="text-[10px] font-bold text-amber-400">Draft</span>
+                    </button>
+
+                    {/* In & Out Button */}
+                    <button
+                      type="button"
+                      onClick={() => setShowInOutModal(true)}
+                      className="w-16 h-16 rounded-2xl border border-sky-500/70 bg-[#1e1e24] hover:bg-sky-500/10 flex flex-col items-center justify-center p-2 text-sky-400 transition active:scale-95 shadow-md group"
+                      title="Buku Surat In & Out"
+                    >
+                      <Printer className="w-6 h-6 mb-1 text-sky-400 group-hover:scale-110 transition" />
+                      <span className="text-[10px] font-bold text-sky-400 leading-tight">In & Out</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Form Elements */}
+                <div className="space-y-4 pt-1">
+                  {/* 1. Jenis Surat */}
+                  <div className="relative">
+                    <label className="block text-xs font-bold text-gray-200 uppercase tracking-wide mb-2">
+                      1. Jenis Surat
+                    </label>
+                    <div
+                      onClick={() => setShowJenisSuratDropdown(!showJenisSuratDropdown)}
+                      className="w-full p-4 pr-10 rounded-2xl bg-[#1e1e24] border border-gray-800 text-white font-bold text-sm tracking-wide cursor-pointer hover:border-gray-700 transition flex justify-between items-center select-none"
+                    >
+                      <span className="truncate">{suratJenis}</span>
+                      <ChevronDown className={`w-5 h-5 text-gray-400 transition-transform duration-200 ${showJenisSuratDropdown ? 'rotate-180 text-teal-400' : ''}`} />
+                    </div>
+
+                    {/* Popover Dropdown persis sesuai gambar IMG_20261023_005120_c3d5a816.jpg */}
+                    {showJenisSuratDropdown && (
+                      <>
+                        {/* Backdrop overlay to close when clicked outside */}
+                        <div
+                          className="fixed inset-0 z-40 bg-black/40 backdrop-blur-[1px]"
+                          onClick={() => setShowJenisSuratDropdown(false)}
+                        />
+
+                        {/* Dropdown Menu Container */}
+                        <div className="absolute left-0 right-0 top-full mt-2 z-50 bg-[#27272a] border border-gray-700/80 rounded-2xl shadow-2xl overflow-hidden divide-y divide-gray-800/60 max-h-[70vh] overflow-y-auto animate-fade-in">
+                          {JENIS_SURAT_OPTIONS.map((item) => {
+                            const isSelected = suratJenis === item;
+                            return (
+                              <button
+                                key={item}
+                                type="button"
+                                onClick={() => {
+                                  setSuratJenis(item);
+                                  setShowJenisSuratDropdown(false);
+                                }}
+                                className={`w-full text-left py-3.5 px-5 font-bold text-xs sm:text-sm tracking-wide transition flex items-center justify-between ${
+                                  isSelected
+                                    ? 'bg-[#3f3f46] text-white'
+                                    : 'text-gray-300 hover:bg-[#323238] hover:text-white'
+                                }`}
+                              >
+                                <span>{item}</span>
+                                {isSelected && (
+                                  <span className="w-2 h-2 rounded-full bg-teal-400 inline-block"></span>
+                                )}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </>
+                    )}
+                  </div>
+
+                  {/* 2. Pilih Warga Pemohon */}
+                  <div>
+                    <label className="block text-xs font-bold text-gray-200 uppercase tracking-wide mb-2">
+                      2. Pilih Warga Pemohon
+                    </label>
+                    {!selectedPemohon ? (
+                      <button
+                        type="button"
+                        onClick={() => setShowWargaPicker(true)}
+                        className="w-full p-4 rounded-2xl bg-[#1e1e24] border border-gray-800 text-gray-400 flex items-center space-x-3 hover:border-gray-700 transition text-left group"
+                      >
+                        <div className="flex items-center space-x-1 text-gray-400 group-hover:text-white transition">
+                          <UserCheck className="w-5 h-5" />
+                        </div>
+                        <span className="text-sm font-medium text-gray-400 group-hover:text-gray-300">
+                          Klik untuk mencari data warga...
+                        </span>
+                      </button>
+                    ) : (
+                      <div className="w-full p-4 rounded-2xl bg-[#1e1e24] border border-teal-500/60 text-white flex justify-between items-center shadow-lg shadow-teal-500/5">
+                        <div onClick={() => setShowWargaPicker(true)} className="flex-1 cursor-pointer">
+                          <div className="flex items-center space-x-2">
+                            <span className="font-bold text-sm text-teal-400">{selectedPemohon.nama}</span>
+                            <span className="text-[10px] bg-teal-500/20 text-teal-300 px-2 py-0.5 rounded-full font-semibold">
+                              {selectedPemohon.jenis_kelamin}
+                            </span>
+                          </div>
+                          <div className="text-xs text-gray-400 mt-1">
+                            NIK: {selectedPemohon.nik} • {selectedPemohon.alamat}
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setSelectedPemohon(null)}
+                          className="p-2 rounded-xl text-gray-400 hover:text-white hover:bg-gray-800 transition"
+                          title="Ganti Warga"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* 3. Keperluan Surat */}
+                  <div>
+                    <label className="block text-xs font-bold text-gray-200 uppercase tracking-wide mb-2">
+                      3. Keperluan Surat
+                    </label>
+                    <textarea
+                      rows={4}
+                      value={keperluanSurat}
+                      onChange={(e) => setKeperluanSurat(e.target.value)}
+                      placeholder={`Ketik keperluan surat di sini...\nContoh: Persyaratan melamar pekerjaan.`}
+                      className="w-full p-4 rounded-2xl bg-[#1e1e24] border border-gray-800 text-white text-sm placeholder-gray-500 focus:outline-none focus:border-teal-500/80 transition resize-none leading-relaxed"
+                    />
+                  </div>
+
+                  {/* 4. Nomor Surat (Otomatis) */}
+                  <div>
+                    <label className="block text-xs font-bold text-gray-200 uppercase tracking-wide mb-2">
+                      4. Nomor Surat (Otomatis)
+                    </label>
+                    <div className="w-full p-4 rounded-2xl bg-[#27272a]/60 border border-gray-800 flex items-center space-x-3 text-xs text-gray-300">
+                      <Sparkles className="w-5 h-5 text-amber-400 shrink-0" />
+                      <span className="font-medium">
+                        Nomor surat akan terbit otomatis saat preview/ cetak (Format: RT.{rtNumber}/RW.{rwNumber})
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Tombol Aksi Bawah: Simpan Draft & GENERATE & PREVIEW SURAT */}
+                  <div className="grid grid-cols-2 gap-3 pt-3">
+                    <button
+                      type="button"
+                      onClick={handleSaveDraft}
+                      className="py-3.5 px-4 rounded-2xl border border-amber-500/80 bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 font-bold text-xs flex items-center justify-center space-x-2 transition active:scale-95 shadow-md"
+                    >
+                      <Bookmark className="w-4 h-4 text-amber-400" />
+                      <span>Simpan Draft</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={handleGeneratePreview}
+                      className="py-3.5 px-4 rounded-2xl bg-[#059669] hover:bg-[#10b981] text-black font-extrabold text-xs uppercase tracking-wider flex items-center justify-center space-x-2 shadow-lg shadow-emerald-600/30 transition active:scale-95"
+                    >
+                      <Printer className="w-4 h-4 text-black" />
+                      <span>GENERATE & PREVIEW SURAT</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* TAB CONTENT: 2. SURAT IMBAUAN (PERSIS SESUAI GAMBAR SCREENSHOT) */}
+            {cetakSuratSubTab === 'imbauan' && (
+              <div className="space-y-4">
+                {/* Header Title */}
+                <div>
+                  <h2 className="text-base sm:text-lg font-bold text-white tracking-tight">Form Surat Imbauan</h2>
+                  <p className="text-xs text-gray-400 mt-0.5">Cocok untuk pengumuman atau surat edaran umum warga.</p>
+                </div>
+
+                {/* 1. Kop Surat Card */}
+                <div className="p-4 rounded-3xl bg-[#1e1e24] border border-gray-800 space-y-3 shadow-lg">
+                  <div className="flex justify-between items-center">
+                    <span className="font-bold text-sm text-white">Kop Surat</span>
+                    <div className="flex items-center space-x-2.5">
+                      <span className="text-xs text-gray-400 font-medium">Kop Full</span>
+                      <button
+                        type="button"
+                        onClick={() => setKopSuratFull(!kopSuratFull)}
+                        className={`w-11 h-6 flex items-center rounded-full p-1 transition duration-300 ${
+                          kopSuratFull ? 'bg-[#10b981]' : 'bg-gray-700'
+                        }`}
+                      >
+                        <div
+                          className={`bg-white w-4 h-4 rounded-full shadow-md transform transition duration-300 ${
+                            kopSuratFull ? 'translate-x-5' : 'translate-x-0'
+                          }`}
+                        />
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center space-x-3 pt-1">
+                    <div className="flex-1 p-4 rounded-2xl bg-[#18181b] border border-dashed border-gray-700/80 text-gray-400 text-xs min-h-[75px] flex items-center justify-center text-center">
+                      Belum ada Kop (Lebar/ Landscape)
+                    </div>
+                    <label className="cursor-pointer px-5 py-3 rounded-2xl bg-[#059669] hover:bg-[#10b981] text-black font-extrabold text-xs flex items-center justify-center transition active:scale-95 shadow-md shadow-emerald-600/20 shrink-0">
+                      <span>Upload Kop</span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={() => alert('Fitur upload gambar kop surat berhasil dipilih!')}
+                      />
+                    </label>
+                  </div>
+                </div>
+
+                {/* 2. Pilih Template Imbauan */}
+                <div className="relative">
+                  <label className="block text-xs font-bold text-gray-200 uppercase tracking-wide mb-2">
+                    Pilih Template Imbauan
+                  </label>
+                  <div
+                    onClick={() => setShowTemplateImbauanDropdown(!showTemplateImbauanDropdown)}
+                    className="w-full p-4 pr-10 rounded-2xl bg-[#1e1e24] border border-gray-800 text-white font-bold text-sm tracking-wide cursor-pointer hover:border-gray-700 transition flex justify-between items-center select-none shadow-md"
+                  >
+                    <span className="truncate">{templateImbauan}</span>
+                    <ChevronDown className={`w-5 h-5 text-gray-400 transition-transform duration-200 ${showTemplateImbauanDropdown ? 'rotate-180 text-teal-400' : ''}`} />
+                  </div>
+
+                  {showTemplateImbauanDropdown && (
+                    <>
+                      <div
+                        className="fixed inset-0 z-40 bg-black/50 backdrop-blur-[1px]"
+                        onClick={() => setShowTemplateImbauanDropdown(false)}
+                      />
+                      <div className="absolute left-0 right-0 top-full mt-2 z-50 bg-[#2a2b2e] border border-zinc-700/70 rounded-xl sm:rounded-2xl shadow-2xl overflow-hidden py-1.5 animate-fade-in">
+                        {Object.keys(TEMPLATE_IMBAUAN_DATA).map((tplKey) => {
+                          const isSelected = templateImbauan === tplKey;
+                          return (
+                            <button
+                              key={tplKey}
+                              type="button"
+                              onClick={() => {
+                                setTemplateImbauan(tplKey);
+                                setPerihalJudulSurat(TEMPLATE_IMBAUAN_DATA[tplKey].perihal);
+                                setIsiSuratImbauan(TEMPLATE_IMBAUAN_DATA[tplKey].isi);
+                                setShowTemplateImbauanDropdown(false);
+                              }}
+                              className={`w-full text-left py-3.5 px-5 font-extrabold text-xs sm:text-sm tracking-wide uppercase transition block ${
+                                isSelected
+                                  ? 'bg-[#3f4248] text-gray-100'
+                                  : 'text-gray-400 hover:bg-[#34363c] hover:text-gray-200'
+                              }`}
+                            >
+                              {tplKey}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </>
+                  )}
+                </div>
+
+                {/* 3. Pengaturan Nomor Surat */}
+                <div className="p-4 rounded-3xl bg-[#1e1e24] border border-gray-800 space-y-3 shadow-lg">
+                  <div className="flex justify-between items-center">
+                    <span className="font-bold text-sm text-white">Pengaturan Nomor Surat</span>
+                    <div className="flex items-center space-x-2.5">
+                      <span className="text-xs text-gray-400 font-medium">Auto-Generate</span>
+                      <button
+                        type="button"
+                        onClick={() => setAutoGenerateNomorSurat(!autoGenerateNomorSurat)}
+                        className={`w-11 h-6 flex items-center rounded-full p-1 transition duration-300 ${
+                          autoGenerateNomorSurat ? 'bg-[#10b981]' : 'bg-gray-700'
+                        }`}
+                      >
+                        <div
+                          className={`bg-white w-4 h-4 rounded-full shadow-md transform transition duration-300 ${
+                            autoGenerateNomorSurat ? 'translate-x-5' : 'translate-x-0'
+                          }`}
+                        />
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="pt-1 space-y-1">
+                    <label className="block text-xs font-bold text-gray-300">Kode Wilayah</label>
+                    <input
+                      type="text"
+                      value={kodeWilayah}
+                      onChange={(e) => setKodeWilayah(e.target.value)}
+                      className="w-full p-3.5 rounded-2xl bg-gray-900 border border-gray-800 text-white font-bold text-sm tracking-wide outline-none focus:border-teal-500"
+                    />
+                    <p className="text-[11px] text-gray-500 italic pt-1">
+                      Format akhir: [Urut]/SI/[Wilayah]/[Bulan]/[Tahun]
+                    </p>
+                  </div>
+                </div>
+
+                {/* 4. Format Tanda Tangan */}
+                <div className="relative">
+                  <label className="block text-xs font-bold text-gray-200 uppercase tracking-wide mb-2">
+                    Format Tanda Tangan
+                  </label>
+                  <div
+                    onClick={() => setShowTandaTanganDropdown(!showTandaTanganDropdown)}
+                    className="w-full p-4 pr-10 rounded-2xl bg-[#1e1e24] border border-gray-800 text-white font-bold text-sm tracking-wide cursor-pointer hover:border-gray-700 transition flex justify-between items-center select-none shadow-md"
+                  >
+                    <span>{formatTandaTangan}</span>
+                    <ChevronDown className={`w-5 h-5 text-gray-400 transition-transform duration-200 ${showTandaTanganDropdown ? 'rotate-180 text-teal-400' : ''}`} />
+                  </div>
+
+                  {showTandaTanganDropdown && (
+                    <>
+                      <div
+                        className="fixed inset-0 z-40 bg-black/40 backdrop-blur-[1px]"
+                        onClick={() => setShowTandaTanganDropdown(false)}
+                      />
+                      <div className="absolute left-0 right-0 top-full mt-2 z-50 bg-[#27272a] border border-gray-700/80 rounded-2xl shadow-2xl overflow-hidden divide-y divide-gray-800/60 animate-fade-in">
+                        {FORMAT_TANDA_TANGAN_OPTIONS.map((opt) => {
+                          const isSelected = formatTandaTangan === opt;
+                          return (
+                            <button
+                              key={opt}
+                              type="button"
+                              onClick={() => {
+                                setFormatTandaTangan(opt);
+                                setShowTandaTanganDropdown(false);
+                              }}
+                              className={`w-full text-left py-3.5 px-5 font-bold text-xs sm:text-sm tracking-wide transition flex items-center justify-between ${
+                                isSelected
+                                  ? 'bg-[#3f3f46] text-white'
+                                  : 'text-gray-300 hover:bg-[#323238] hover:text-white'
+                              }`}
+                            >
+                              <span>{opt}</span>
+                              {isSelected && (
+                                <span className="w-2 h-2 rounded-full bg-teal-400 inline-block"></span>
+                              )}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </>
+                  )}
+                </div>
+
+                {/* 5. Perihal / Judul Surat */}
+                <div>
+                  <label className="block text-xs font-bold text-gray-200 uppercase tracking-wide mb-2">
+                    Perihal / Judul Surat
+                  </label>
+                  <input
+                    type="text"
+                    value={perihalJudulSurat}
+                    onChange={(e) => setPerihalJudulSurat(e.target.value)}
+                    className="w-full p-4 rounded-2xl bg-[#1e1e24] border border-gray-800 text-white font-bold text-sm tracking-wide outline-none focus:border-teal-500 shadow-md"
+                  />
+                </div>
+
+                {/* 6. Isi Surat Imbauan */}
+                <div>
+                  <label className="block text-xs font-bold text-gray-200 uppercase tracking-wide mb-1">
+                    Isi Surat Imbauan
+                  </label>
+                  <p className="text-xs text-gray-400 mb-2">
+                    Edit isi surat sesuai kebutuhan. Gunakan bahasa yang formal.
+                  </p>
+                  <textarea
+                    rows={6}
+                    value={isiSuratImbauan}
+                    onChange={(e) => setIsiSuratImbauan(e.target.value)}
+                    className="w-full p-4 rounded-2xl bg-[#1e1e24] border border-gray-800 text-white text-sm leading-relaxed outline-none focus:border-teal-500/80 transition resize-none font-sans shadow-md"
+                  />
+                </div>
+
+                {/* Tombol Aksi Bawah */}
+                <div className="grid grid-cols-2 gap-3 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const newDraft = {
+                        id: 'drf_' + Date.now(),
+                        jenis: 'SURAT IMBAUAN: ' + perihalJudulSurat,
+                        pemohonNama: 'Warga RT ' + rtNumber,
+                        pemohonNik: '-',
+                        keperluan: perihalJudulSurat,
+                        tanggal: new Date().toISOString().split('T')[0]
+                      };
+                      setDraftList([newDraft, ...draftList]);
+                      alert('Draft Surat Imbauan berhasil disimpan!');
+                    }}
+                    className="py-3.5 px-4 rounded-2xl border border-amber-500/80 bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 font-bold text-xs flex items-center justify-center space-x-2 transition active:scale-95 shadow-md"
+                  >
+                    <Bookmark className="w-4 h-4 text-amber-400" />
+                    <span>Simpan Draft</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleGenerateImbauan}
+                    className="py-3.5 px-4 rounded-2xl bg-[#059669] hover:bg-[#10b981] text-black font-extrabold text-xs uppercase tracking-wider flex items-center justify-center space-x-2 shadow-lg shadow-emerald-600/30 transition active:scale-95"
+                  >
+                    <Printer className="w-4 h-4 text-black" />
+                    <span>GENERATE & PREVIEW SURAT</span>
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* TAB CONTENT: 3. PENGATURAN SURAT */}
+            {cetakSuratSubTab === 'pengaturan' && (
+              <div className="space-y-4">
+                <div className="p-4 rounded-2xl bg-[#1e1e24] border border-gray-800 space-y-3">
+                  <h3 className="font-bold text-sm text-white flex items-center space-x-2">
+                    <Settings className="w-4 h-4 text-teal-400" />
+                    <span>Pengaturan Template & Kop Surat RT</span>
+                  </h3>
+                  <p className="text-xs text-gray-400">
+                    Sesuaikan identitas pengurus RT yang tercantum pada hasil cetak surat resmi.
+                  </p>
+
+                  <div className="space-y-3 pt-2 text-xs">
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="block text-gray-400 mb-1">Nomor RT</label>
+                        <input
+                          type="text"
+                          value={rtNumber}
+                          onChange={(e) => setRtNumber(e.target.value)}
+                          className="w-full p-3 rounded-xl bg-gray-900 border border-gray-800 text-white font-bold"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-gray-400 mb-1">Nomor RW</label>
+                        <input
+                          type="text"
+                          value={rwNumber}
+                          onChange={(e) => setRwNumber(e.target.value)}
+                          className="w-full p-3 rounded-xl bg-gray-900 border border-gray-800 text-white font-bold"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-gray-400 mb-1">Nama Lengkap Ketua RT (Penandatangan)</label>
+                      <input
+                        type="text"
+                        value={templateNamaKetua}
+                        onChange={(e) => setTemplateNamaKetua(e.target.value)}
+                        className="w-full p-3 rounded-xl bg-gray-900 border border-gray-800 text-white"
+                      />
+                    </div>
+
+                    <div className="p-3 rounded-xl bg-gray-900/60 border border-gray-800 text-[11px] text-gray-300">
+                      <span className="text-teal-400 font-bold">Format Penomoran Aktif:</span>
+                      <p className="mt-0.5 font-mono text-xs text-gray-200">
+                        XXX/RT.{rtNumber}/RW.{rwNumber}/[Bulan Romawi]/[Tahun]
+                      </p>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => alert('Template surat berhasil disimpan!')}
+                      className="w-full py-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs shadow-lg shadow-blue-600/30 transition"
+                    >
+                      Simpan Pengaturan Template
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
         {/* MORE / PENGATURAN TAB */}
         {activeTab === 'more' && (
           <div className="space-y-4 animate-fade-in">
@@ -1350,9 +2257,10 @@ export default function App() {
           </div>
         )}
       </main>
+      </div>
 
-      {/* Floating Bottom Navigation Bar - Otomatis rapih di HP & Laptop/PC */}
-      <nav className={`fixed bottom-0 left-0 right-0 max-w-md md:max-w-3xl lg:max-w-5xl xl:max-w-6xl mx-auto px-4 py-3 border-t md:border md:rounded-2xl md:bottom-3 md:shadow-2xl flex justify-around items-center z-50 transition-all ${isDarkMode ? 'bg-[#18181b]/95 border-gray-800 backdrop-blur-lg' : 'bg-white/95 border-gray-200 backdrop-blur-lg'}`}>
+      {/* Floating Bottom Navigation Bar - Khusus di HP (md:hidden), sedangkan di Laptop/PC berada di Sidebar samping */}
+      <nav className={`md:hidden fixed bottom-0 left-0 right-0 max-w-md mx-auto px-4 py-3 border-t flex justify-around items-center z-50 transition-all ${isDarkMode ? 'bg-[#18181b]/95 border-gray-800 backdrop-blur-lg' : 'bg-white/95 border-gray-200 backdrop-blur-lg'}`}>
         <button
           onClick={() => setActiveTab('dash')}
           className={`flex flex-col items-center space-y-1 transition ${activeTab === 'dash' ? 'text-blue-500 font-bold' : 'text-gray-400 hover:text-gray-200'}`}
@@ -1388,17 +2296,165 @@ export default function App() {
         </button>
 
         <button
-          onClick={() => {
-            setShowMoreLainnyaModal(true);
-          }}
-          className={`flex flex-col items-center space-y-1 transition text-gray-400 hover:text-gray-200`}
+          onClick={() => setShowMoreLainnyaModal(true)}
+          className={`flex flex-col items-center space-y-1 transition ${showMoreLainnyaModal ? 'text-blue-500 font-bold' : 'text-gray-400 hover:text-gray-200'}`}
         >
           <Menu className="w-5 h-5" />
-          <span className="text-[10px]">More</span>
+          <span className="text-[10px]">Lainnya</span>
         </button>
       </nav>
 
-      {/* MODAL: Tambah Warga */}
+      {/* MODAL: Menu Lainnya (8 Modul) */}
+      {showMoreLainnyaModal && (
+        <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center p-0 sm:p-4">
+          <div 
+            className="absolute inset-0 bg-black/80 backdrop-blur-sm transition-opacity"
+            onClick={() => setShowMoreLainnyaModal(false)}
+          />
+          <div className={`relative w-full max-w-2xl ${isDarkMode ? 'bg-[#18181b]' : 'bg-white'} rounded-t-[2.5rem] sm:rounded-[2.5rem] border-x border-t sm:border-b ${isDarkMode ? 'border-gray-800' : 'border-gray-200'} p-6 sm:p-8 shadow-2xl animate-slide-up sm:animate-zoom-in overflow-hidden`}>
+            {/* Header Modal */}
+            <div className="flex justify-between items-center mb-8">
+              <div>
+                <h3 className={`text-xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Menu Lainnya</h3>
+                <p className="text-sm text-gray-400">Pilih modul administrasi yang ingin Anda akses</p>
+              </div>
+              <button 
+                onClick={() => setShowMoreLainnyaModal(false)}
+                className={`p-2.5 rounded-2xl ${isDarkMode ? 'bg-gray-800 text-gray-400 hover:text-white' : 'bg-gray-100 text-gray-600 hover:text-gray-900'} transition-colors`}
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            {/* Grid Modul */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+              {/* 1. Riwayat Mutasi */}
+              <button
+                onClick={() => {
+                  setActiveTab('mutasi');
+                  setShowMoreLainnyaModal(false);
+                }}
+                className={`group flex flex-col items-center p-5 rounded-[2rem] border transition-all duration-300 ${isDarkMode ? 'bg-gray-900/50 border-gray-800 hover:bg-blue-600/10 hover:border-blue-500/50' : 'bg-gray-50 border-gray-200 hover:bg-blue-50 hover:border-blue-200'}`}
+              >
+                <div className="w-14 h-14 rounded-2xl bg-blue-500/20 text-blue-500 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+                  <RefreshCcw className="w-7 h-7" />
+                </div>
+                <span className={`text-xs font-bold text-center ${isDarkMode ? 'text-gray-300 group-hover:text-blue-400' : 'text-gray-700 group-hover:text-blue-600'}`}>Riwayat Mutasi</span>
+              </button>
+
+              {/* 2. Surat Pengantar */}
+              <button
+                onClick={() => {
+                  setActiveTab('surat');
+                  setShowMoreLainnyaModal(false);
+                }}
+                className={`group flex flex-col items-center p-5 rounded-[2rem] border transition-all duration-300 ${isDarkMode ? 'bg-gray-900/50 border-gray-800 hover:bg-emerald-600/10 hover:border-emerald-500/50' : 'bg-gray-50 border-gray-200 hover:bg-emerald-50 hover:border-emerald-200'}`}
+              >
+                <div className="w-14 h-14 rounded-2xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+                  <FileText className="w-7 h-7" />
+                </div>
+                <span className={`text-xs font-bold text-center ${isDarkMode ? 'text-gray-300 group-hover:text-emerald-400' : 'text-gray-700 group-hover:text-emerald-600'}`}>Surat Pengantar</span>
+              </button>
+
+              {/* 3. Cetak Surat */}
+              <button
+                onClick={() => {
+                  setActiveTab('cetak-surat');
+                  setCetakSuratSubTab('warga');
+                  setShowMoreLainnyaModal(false);
+                }}
+                className={`group flex flex-col items-center p-5 rounded-[2rem] border transition-all duration-300 ${isDarkMode ? 'bg-gray-900/50 border-gray-800 hover:bg-purple-600/10 hover:border-purple-500/50' : 'bg-gray-50 border-gray-200 hover:bg-purple-50 hover:border-purple-200'}`}
+              >
+                <div className="w-14 h-14 rounded-2xl bg-purple-500/20 text-purple-400 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+                  <Printer className="w-7 h-7" />
+                </div>
+                <span className={`text-xs font-bold text-center ${isDarkMode ? 'text-gray-300 group-hover:text-purple-400' : 'text-gray-700 group-hover:text-purple-600'}`}>Cetak Surat</span>
+              </button>
+
+              {/* 4. Laporan Statistik */}
+              <button
+                onClick={() => {
+                  setActiveTab('dash');
+                  setShowMoreLainnyaModal(false);
+                }}
+                className={`group flex flex-col items-center p-5 rounded-[2rem] border transition-all duration-300 ${isDarkMode ? 'bg-gray-900/50 border-gray-800 hover:bg-teal-600/10 hover:border-teal-500/50' : 'bg-gray-50 border-gray-200 hover:bg-teal-50 hover:border-teal-200'}`}
+              >
+                <div className="w-14 h-14 rounded-2xl bg-teal-500/20 text-teal-400 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+                  <BarChart3 className="w-7 h-7" />
+                </div>
+                <span className={`text-xs font-bold text-center ${isDarkMode ? 'text-gray-300 group-hover:text-teal-400' : 'text-gray-700 group-hover:text-teal-600'}`}>Laporan Statistik</span>
+              </button>
+
+              {/* 5. Inventaris Aset */}
+              <button
+                onClick={() => {
+                  alert(`Modul Inventaris & Aset RT ${rtNumber}`);
+                  setShowMoreLainnyaModal(false);
+                }}
+                className={`group flex flex-col items-center p-5 rounded-[2rem] border transition-all duration-300 ${isDarkMode ? 'bg-gray-900/50 border-gray-800 hover:bg-indigo-600/10 hover:border-indigo-500/50' : 'bg-gray-50 border-gray-200 hover:bg-indigo-50 hover:border-indigo-200'}`}
+              >
+                <div className="w-14 h-14 rounded-2xl bg-indigo-500/20 text-indigo-500 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+                  <Package className="w-7 h-7" />
+                </div>
+                <span className={`text-xs font-bold text-center ${isDarkMode ? 'text-gray-300 group-hover:text-indigo-400' : 'text-gray-700 group-hover:text-indigo-600'}`}>Inventaris Aset</span>
+              </button>
+
+              {/* 6. Bantuan Sosial */}
+              <button
+                onClick={() => {
+                  alert(`Modul Bantuan Sosial (Bansos) Warga RT ${rtNumber}`);
+                  setShowMoreLainnyaModal(false);
+                }}
+                className={`group flex flex-col items-center p-5 rounded-[2rem] border transition-all duration-300 ${isDarkMode ? 'bg-gray-900/50 border-gray-800 hover:bg-amber-600/10 hover:border-amber-500/50' : 'bg-gray-50 border-gray-200 hover:bg-amber-50 hover:border-amber-200'}`}
+              >
+                <div className="w-14 h-14 rounded-2xl bg-amber-500/20 text-amber-500 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+                  <HeartHandshake className="w-7 h-7" />
+                </div>
+                <span className={`text-xs font-bold text-center ${isDarkMode ? 'text-gray-300 group-hover:text-amber-400' : 'text-gray-700 group-hover:text-amber-600'}`}>Bantuan Sosial</span>
+              </button>
+
+              {/* 7. Log Aktivitas */}
+              <button
+                onClick={() => {
+                  alert(`Log Aktivitas Sistem WargaKu RT ${rtNumber}`);
+                  setShowMoreLainnyaModal(false);
+                }}
+                className={`group flex flex-col items-center p-5 rounded-[2rem] border transition-all duration-300 ${isDarkMode ? 'bg-gray-900/50 border-gray-800 hover:bg-orange-600/10 hover:border-orange-500/50' : 'bg-gray-50 border-gray-200 hover:bg-orange-50 hover:border-orange-200'}`}
+              >
+                <div className="w-14 h-14 rounded-2xl bg-orange-500/20 text-orange-400 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+                  <FileText className="w-7 h-7" />
+                </div>
+                <span className={`text-xs font-bold text-center ${isDarkMode ? 'text-gray-300 group-hover:text-orange-400' : 'text-gray-700 group-hover:text-orange-600'}`}>Log Aktivitas</span>
+              </button>
+
+              {/* 8. Pengaturan RT */}
+              <button
+                onClick={() => {
+                  setActiveTab('more');
+                  setShowMoreLainnyaModal(false);
+                }}
+                className={`group flex flex-col items-center p-5 rounded-[2rem] border transition-all duration-300 ${isDarkMode ? 'bg-gray-900/50 border-gray-800 hover:bg-slate-600/10 hover:border-slate-500/50' : 'bg-gray-50 border-gray-200 hover:bg-slate-50 hover:border-slate-200'}`}
+              >
+                <div className="w-14 h-14 rounded-2xl bg-slate-500/20 text-slate-500 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+                  <Settings className="w-7 h-7" />
+                </div>
+                <span className={`text-xs font-bold text-center ${isDarkMode ? 'text-gray-300 group-hover:text-slate-400' : 'text-gray-700 group-hover:text-slate-600'}`}>Pengaturan RT</span>
+              </button>
+            </div>
+
+            {/* Footer Modal / Info */}
+            <div className={`mt-10 pt-6 border-t ${isDarkMode ? 'border-gray-800' : 'border-gray-100'} flex justify-between items-center`}>
+              <div className="flex items-center space-x-2">
+                <ShieldCheck className="w-4 h-4 text-blue-500" />
+                <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Sistem Administrasi Warga v2.4</span>
+              </div>
+              <span className="text-[10px] font-medium text-gray-400">RT {rtNumber} / RW {rwNumber}</span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: Tambah Warga - Semua Icon & Konten Utuh */}
       {showAddResidentModal && (
         <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
           <div className={`w-full max-w-md md:max-w-lg p-6 rounded-2xl border ${isDarkMode ? 'bg-[#1e1e24] border-gray-800 text-white' : 'bg-white border-gray-200 text-gray-900'} space-y-4 max-h-[90vh] overflow-y-auto`}>
@@ -1750,142 +2806,6 @@ export default function App() {
         </div>
       )}
 
-      {/* MODAL: Menu Lainnya */}
-      {showMoreLainnyaModal && (
-        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-end md:items-center justify-center p-0 md:p-4">
-          <div className="w-full max-w-md md:max-w-lg bg-[#1e1e24] text-white rounded-t-[32px] md:rounded-[32px] p-6 space-y-6 shadow-2xl border-t md:border border-gray-800 animate-slide-up">
-            <div className="flex justify-between items-center">
-              <h3 className="font-bold text-base tracking-tight">Menu Lainnya</h3>
-              <button onClick={() => setShowMoreLainnyaModal(false)} className="p-1 rounded-lg text-gray-400 hover:bg-gray-800">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <div className="grid grid-cols-4 gap-4 pt-2">
-              {/* 1. Riwayat Mutasi */}
-              <button
-                onClick={() => {
-                  setShowMoreLainnyaModal(false);
-                  setActiveTab('mutasi');
-                }}
-                className="flex flex-col items-center space-y-2 group"
-              >
-                <div className="w-14 h-14 rounded-full bg-blue-500/20 text-blue-400 flex items-center justify-center transition group-hover:scale-105 shadow-md">
-                  <RefreshCcw className="w-6 h-6" />
-                </div>
-                <span className="text-xs font-medium text-gray-200">Mutasi</span>
-              </button>
-
-              {/* 2. Surat Pengantar */}
-              <button
-                onClick={() => {
-                  setShowMoreLainnyaModal(false);
-                  setActiveTab('surat');
-                }}
-                className="flex flex-col items-center space-y-2 group"
-              >
-                <div className="w-14 h-14 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center transition group-hover:scale-105 shadow-md">
-                  <FileText className="w-6 h-6" />
-                </div>
-                <span className="text-xs font-medium text-gray-200">Pengantar</span>
-              </button>
-
-              {/* 3. Cetak Surat */}
-              <button
-                onClick={() => {
-                  setShowMoreLainnyaModal(false);
-                  setActiveTab('surat');
-                }}
-                className="flex flex-col items-center space-y-2 group"
-              >
-                <div className="w-14 h-14 rounded-full bg-purple-500/20 text-purple-400 flex items-center justify-center transition group-hover:scale-105 shadow-md">
-                  <Printer className="w-6 h-6" />
-                </div>
-                <span className="text-xs font-medium text-gray-200">Cetak Surat</span>
-              </button>
-
-              {/* 4. Laporan */}
-              <button
-                onClick={() => {
-                  setShowMoreLainnyaModal(false);
-                  setActiveTab('dash');
-                }}
-                className="flex flex-col items-center space-y-2 group"
-              >
-                <div className="w-14 h-14 rounded-full bg-teal-500/20 text-teal-400 flex items-center justify-center transition group-hover:scale-105 shadow-md">
-                  <BarChart3 className="w-6 h-6" />
-                </div>
-                <span className="text-xs font-medium text-gray-200">Laporan</span>
-              </button>
-
-              {/* 5. Inventaris */}
-              <button
-                onClick={() => {
-                  setShowMoreLainnyaModal(false);
-                  alert('Modul Inventaris & Aset RT 011');
-                }}
-                className="flex flex-col items-center space-y-2 group"
-              >
-                <div className="w-14 h-14 rounded-full bg-indigo-500/20 text-indigo-400 flex items-center justify-center transition group-hover:scale-105 shadow-md">
-                  <Package className="w-6 h-6" />
-                </div>
-                <span className="text-xs font-medium text-gray-200">Inventaris</span>
-              </button>
-
-              {/* 6. Bantuan */}
-              <button
-                onClick={() => {
-                  setShowMoreLainnyaModal(false);
-                  alert('Modul Bantuan Sosial (Bansos) Warga');
-                }}
-                className="flex flex-col items-center space-y-2 group"
-              >
-                <div className="w-14 h-14 rounded-full bg-amber-500/20 text-amber-400 flex items-center justify-center transition group-hover:scale-105 shadow-md">
-                  <HeartHandshake className="w-6 h-6" />
-                </div>
-                <span className="text-xs font-medium text-gray-200">Bantuan</span>
-              </button>
-
-              {/* 7. Log Aktivitas */}
-              <button
-                onClick={() => {
-                  setShowMoreLainnyaModal(false);
-                  alert('Log Aktivitas Sistem WargaKu');
-                }}
-                className="flex flex-col items-center space-y-2 group"
-              >
-                <div className="w-14 h-14 rounded-full bg-orange-500/20 text-orange-400 flex items-center justify-center transition group-hover:scale-105 shadow-md">
-                  <FileText className="w-6 h-6" />
-                </div>
-                <span className="text-[11px] font-medium text-gray-200 text-center leading-tight">Log Aktivitas</span>
-              </button>
-
-              {/* 8. Pengaturan */}
-              <button
-                onClick={() => {
-                  setShowMoreLainnyaModal(false);
-                  setActiveTab('more');
-                }}
-                className="flex flex-col items-center space-y-2 group"
-              >
-                <div className="w-14 h-14 rounded-full bg-slate-500/20 text-slate-300 flex items-center justify-center transition group-hover:scale-105 shadow-md">
-                  <Settings className="w-6 h-6" />
-                </div>
-                <span className="text-xs font-medium text-gray-200">Pengaturan</span>
-              </button>
-            </div>
-
-            <div className="pt-2 pb-4 text-center">
-              <button
-                onClick={() => setShowMoreLainnyaModal(false)}
-                className="w-full py-3 rounded-2xl bg-gray-800 text-gray-300 font-bold text-sm hover:bg-gray-700 transition"
-              >
-                Tutup
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* MODAL: Tambah Mutasi */}
       {showAddMutationModal && (
@@ -1976,6 +2896,467 @@ export default function App() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: Pilih Warga Pemohon */}
+      {showWargaPicker && (
+        <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in">
+          <div className="w-full max-w-md bg-[#1e1e24] border border-gray-800 rounded-3xl p-5 space-y-4 max-h-[85vh] flex flex-col shadow-2xl">
+            <div className="flex justify-between items-center pb-2 border-b border-gray-800">
+              <div>
+                <h3 className="font-bold text-base text-white">Pilih Warga Pemohon</h3>
+                <p className="text-xs text-gray-400">Pilih dari data warga terdaftar RT {rtNumber}</p>
+              </div>
+              <button
+                onClick={() => setShowWargaPicker(false)}
+                className="p-1.5 rounded-xl text-gray-400 hover:text-white hover:bg-gray-800"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Search */}
+            <div className="relative">
+              <Search className="absolute left-3.5 top-3.5 w-4 h-4 text-gray-400" />
+              <input
+                type="text"
+                placeholder="Cari nama atau NIK warga..."
+                value={wargaPickerSearch}
+                onChange={(e) => setWargaPickerSearch(e.target.value)}
+                className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-gray-900 border border-gray-800 text-white text-xs outline-none focus:border-teal-500"
+              />
+            </div>
+
+            {/* Residents list */}
+            <div className="flex-1 overflow-y-auto space-y-2 pr-1">
+              {residents.filter(r => r.nama.toLowerCase().includes(wargaPickerSearch.toLowerCase()) || r.nik.includes(wargaPickerSearch)).length === 0 ? (
+                <div className="text-center py-8 text-gray-500 text-xs">
+                  Tidak ada data warga yang cocok.
+                </div>
+              ) : (
+                residents
+                  .filter(r => r.nama.toLowerCase().includes(wargaPickerSearch.toLowerCase()) || r.nik.includes(wargaPickerSearch))
+                  .map((r) => (
+                    <div
+                      key={r.id}
+                      onClick={() => {
+                        setSelectedPemohon(r);
+                        setShowWargaPicker(false);
+                      }}
+                      className={`p-3 rounded-2xl border transition cursor-pointer flex justify-between items-center ${
+                        selectedPemohon?.id === r.id
+                          ? 'bg-teal-500/10 border-teal-500 text-white'
+                          : 'bg-gray-900/50 border-gray-800/80 hover:bg-gray-900 text-gray-200'
+                      }`}
+                    >
+                      <div className="space-y-0.5">
+                        <div className="font-bold text-xs text-white flex items-center space-x-1.5">
+                          <span>{r.nama}</span>
+                          <span className="text-[10px] text-gray-400 font-normal">({r.jenis_kelamin === 'Laki-laki' ? 'L' : 'P'})</span>
+                        </div>
+                        <div className="text-[11px] text-gray-400">NIK: {r.nik}</div>
+                        <div className="text-[10px] text-gray-500 truncate max-w-xs">{r.alamat}</div>
+                      </div>
+
+                      <div className="w-8 h-8 rounded-xl bg-teal-500/20 text-teal-400 flex items-center justify-center shrink-0">
+                        <UserCheck className="w-4 h-4" />
+                      </div>
+                    </div>
+                  ))
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: Surat Preview & Cetak PDF */}
+      {showSuratPreviewModal && (
+        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto">
+          <div className="w-full max-w-2xl bg-white text-gray-900 rounded-3xl p-6 sm:p-8 space-y-6 shadow-2xl my-8">
+            <div className="flex justify-between items-center pb-3 border-b print:hidden">
+              <span className="text-xs font-bold uppercase tracking-wider text-teal-700 bg-teal-50 px-3 py-1 rounded-full">
+                Preview Surat Resmi RT
+              </span>
+              <button
+                onClick={() => setShowSuratPreviewModal(false)}
+                className="p-1 rounded-lg text-gray-400 hover:text-gray-900 hover:bg-gray-100"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Official Letter Paper Layout */}
+            <div className="space-y-4 font-serif text-gray-900 px-2 sm:px-6">
+              {/* Kop Surat */}
+              <div className="text-center pb-3 border-b-2 border-gray-900 space-y-1">
+                <h3 className="text-xs sm:text-sm font-bold tracking-widest uppercase">
+                  PEMERINTAH KOTA ADMINISTRASI JAKARTA
+                </h3>
+                <h4 className="text-xs sm:text-sm font-bold tracking-wider uppercase">
+                  KECAMATAN SEJAHTERA • KELURAHAN MELATI
+                </h4>
+                <h2 className="text-base sm:text-lg font-black tracking-widest uppercase">
+                  RUKUN TETANGGA {rtNumber} / RUKUN WARGA {rwNumber}
+                </h2>
+                <p className="text-[11px] font-sans text-gray-600">
+                  Sekretariat: Jl. Melati Raya No. 12 RT {rtNumber}/RW {rwNumber} Telp: 0812-3456-7890
+                </p>
+              </div>
+
+              {/* Title & Nomor Surat */}
+              <div className="text-center py-2 space-y-1">
+                <h3 className="font-bold text-sm sm:text-base underline uppercase tracking-wider">
+                  {suratJenis}
+                </h3>
+                <p className="text-xs font-sans text-gray-700">
+                  Nomor: <span className="font-mono font-semibold">{generatedLetterNumber}</span>
+                </p>
+              </div>
+
+              {/* Opening Statement */}
+              <p className="text-xs sm:text-sm leading-relaxed indent-8">
+                Yang bertanda tangan di bawah ini Ketua Rukun Tetangga (RT) {rtNumber} / Rukun Warga (RW) {rwNumber} Kelurahan Melati, Kecamatan Sejahtera, dengan ini menerangkan bahwa:
+              </p>
+
+              {/* Resident Details Table */}
+              <div className="text-xs sm:text-sm space-y-1.5 pl-6 font-sans">
+                <div className="grid grid-cols-3 gap-2">
+                  <span className="text-gray-600">Nama Lengkap</span>
+                  <span className="col-span-2 font-bold">: {selectedPemohon?.nama || 'Budi Santoso'}</span>
+                </div>
+                <div className="grid grid-cols-3 gap-2">
+                  <span className="text-gray-600">Nomor Induk Kependudukan (NIK)</span>
+                  <span className="col-span-2 font-mono font-semibold">: {selectedPemohon?.nik || '3275011001850001'}</span>
+                </div>
+                <div className="grid grid-cols-3 gap-2">
+                  <span className="text-gray-600">Nomor Kartu Keluarga (KK)</span>
+                  <span className="col-span-2 font-mono font-semibold">: {selectedPemohon?.no_kk || '3275011001000001'}</span>
+                </div>
+                <div className="grid grid-cols-3 gap-2">
+                  <span className="text-gray-600">Jenis Kelamin</span>
+                  <span className="col-span-2">: {selectedPemohon?.jenis_kelamin || 'Laki-laki'}</span>
+                </div>
+                <div className="grid grid-cols-3 gap-2">
+                  <span className="text-gray-600">Pekerjaan</span>
+                  <span className="col-span-2">: {selectedPemohon?.pekerjaan || 'Karyawan Swasta'}</span>
+                </div>
+                <div className="grid grid-cols-3 gap-2">
+                  <span className="text-gray-600">Agama</span>
+                  <span className="col-span-2">: {selectedPemohon?.agama || 'Islam'}</span>
+                </div>
+                <div className="grid grid-cols-3 gap-2">
+                  <span className="text-gray-600">Alamat KTP / Domisili</span>
+                  <span className="col-span-2">: {selectedPemohon?.alamat || 'Jl. Melati No. 12, RT 011/RW 04'}</span>
+                </div>
+              </div>
+
+              {/* Statement Purpose */}
+              <p className="text-xs sm:text-sm leading-relaxed indent-8">
+                Bahwa nama tersebut di atas adalah benar warga kami yang berdomisili di RT {rtNumber}/RW {rwNumber}. Surat keterangan ini diterbitkan untuk dipergunakan sebagai:
+              </p>
+
+              <div className="p-3 bg-gray-50 border border-gray-200 rounded-xl text-xs sm:text-sm font-semibold text-center uppercase tracking-wide">
+                "{keperluanSurat || 'Persyaratan kelengkapan administrasi warga'}"
+              </div>
+
+              <p className="text-xs sm:text-sm leading-relaxed indent-8">
+                Demikian surat keterangan ini kami buat dengan sebenarnya agar dapat dipergunakan sebagaimana mestinya.
+              </p>
+
+              {/* Signatures */}
+              <div className="pt-6 flex justify-between items-end text-xs sm:text-sm font-sans">
+                <div className="text-center w-40">
+                  <p>Pemohon,</p>
+                  <div className="h-16"></div>
+                  <p className="font-bold underline uppercase">{selectedPemohon?.nama || 'Budi Santoso'}</p>
+                </div>
+
+                <div className="text-center w-48 space-y-1">
+                  <p>Jakarta, {formatDateIndo()}</p>
+                  <p className="font-semibold">Ketua RT {rtNumber} / RW {rwNumber}</p>
+                  <div className="h-14 flex items-center justify-center">
+                    <span className="text-[10px] text-teal-800 font-bold border-2 border-teal-800 px-2 py-0.5 rounded rotate-[-6deg] opacity-70">
+                      [CAP RT {rtNumber}]
+                    </span>
+                  </div>
+                  <p className="font-bold underline uppercase">({templateNamaKetua})</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex justify-end space-x-3 pt-4 border-t print:hidden">
+              <button
+                type="button"
+                onClick={() => setShowSuratPreviewModal(false)}
+                className="px-5 py-2.5 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold text-xs"
+              >
+                Tutup
+              </button>
+              <button
+                type="button"
+                onClick={() => window.print()}
+                className="px-6 py-2.5 rounded-xl bg-teal-600 hover:bg-teal-700 text-white font-bold text-xs shadow-lg shadow-teal-600/30 flex items-center space-x-2"
+              >
+                <Printer className="w-4 h-4" />
+                <span>Cetak PDF Sekarang</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: Surat Imbauan Preview & Cetak PDF */}
+      {showImbauanPreviewModal && (
+        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto">
+          <div className="w-full max-w-2xl bg-white text-gray-900 rounded-3xl p-6 sm:p-8 space-y-6 shadow-2xl my-8">
+            <div className="flex justify-between items-center pb-3 border-b print:hidden">
+              <div className="flex items-center space-x-2">
+                <span className="text-xs font-bold uppercase tracking-wider text-emerald-800 bg-emerald-50 px-3 py-1 rounded-full">
+                  Preview Surat Imbauan
+                </span>
+                <span className="text-xs text-gray-500 font-mono">
+                  {formatTandaTangan}
+                </span>
+              </div>
+              <button
+                onClick={() => setShowImbauanPreviewModal(false)}
+                className="p-1 rounded-lg text-gray-400 hover:text-gray-900 hover:bg-gray-100"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Official Announcement / Imbauan Letter Layout */}
+            <div className="space-y-4 font-serif text-gray-900 px-2 sm:px-6">
+              {/* Kop Surat */}
+              <div className="text-center pb-3 border-b-2 border-double border-gray-900 space-y-1">
+                <h3 className="text-xs sm:text-sm font-bold tracking-widest uppercase">
+                  PENGURUS RUKUN TETANGGA {rtNumber} / RUKUN WARGA {rwNumber}
+                </h3>
+                <h4 className="text-xs sm:text-sm font-bold tracking-wider uppercase">
+                  KELURAHAN MELATI • KECAMATAN SEJAHTERA
+                </h4>
+                <p className="text-[11px] font-sans text-gray-600">
+                  Sekretariat: Balai Warga RT {rtNumber}/RW {rwNumber}, Jl. Melati Raya No. 1 • Telp/WA: 0812-3456-7890
+                </p>
+              </div>
+
+              {/* Meta: Nomor, Lampiran, Perihal, Tanggal */}
+              <div className="flex justify-between items-start text-xs font-sans py-2">
+                <div className="space-y-1">
+                  <div className="flex">
+                    <span className="w-20 text-gray-600">Nomor</span>
+                    <span className="font-semibold font-mono">: {generatedImbauanNumber}</span>
+                  </div>
+                  <div className="flex">
+                    <span className="w-20 text-gray-600">Sifat</span>
+                    <span className="font-semibold">: Penting / Imbauan Bersama</span>
+                  </div>
+                  <div className="flex">
+                    <span className="w-20 text-gray-600">Lampiran</span>
+                    <span>: -</span>
+                  </div>
+                  <div className="flex">
+                    <span className="w-20 text-gray-600">Perihal</span>
+                    <span className="font-bold underline text-gray-900">: {perihalJudulSurat}</span>
+                  </div>
+                </div>
+
+                <div className="text-right space-y-1">
+                  <p>Jakarta, {formatDateIndo()}</p>
+                  <p className="text-gray-600 font-semibold">Kepada Yth.</p>
+                  <p className="font-bold">Seluruh Warga RT {rtNumber} / RW {rwNumber}</p>
+                  <p className="text-gray-500 text-[11px]">di Tempat</p>
+                </div>
+              </div>
+
+              {/* Title Header */}
+              <div className="text-center py-2">
+                <h3 className="font-bold text-sm sm:text-base underline uppercase tracking-wider">
+                  SURAT EDARAN & IMBAUAN
+                </h3>
+              </div>
+
+              {/* Letter Body Text */}
+              <div className="text-xs sm:text-sm leading-relaxed whitespace-pre-line font-sans text-gray-800 text-justify">
+                {isiSuratImbauan}
+              </div>
+
+              {/* Closing statement */}
+              <p className="text-xs sm:text-sm leading-relaxed indent-8 font-sans text-gray-800 pt-2">
+                Demikian surat imbauan ini kami sampaikan. Atas perhatian, kerja sama, dan partisipasi aktif seluruh warga kami ucapkan terima kasih.
+              </p>
+
+              {/* Signatures based on formatTandaTangan */}
+              <div className="pt-8 text-xs sm:text-sm font-sans">
+                {formatTandaTangan === 'RT & Sekretaris' && (
+                  <div className="flex justify-between items-end">
+                    <div className="text-center w-48 space-y-1">
+                      <p className="font-semibold">Sekretaris RT {rtNumber}</p>
+                      <div className="h-16"></div>
+                      <p className="font-bold underline uppercase">(Hendro Wicaksono)</p>
+                    </div>
+
+                    <div className="text-center w-48 space-y-1">
+                      <p className="font-semibold">Ketua RT {rtNumber}</p>
+                      <div className="h-14 flex items-center justify-center">
+                        <span className="text-[10px] text-emerald-800 font-bold border-2 border-emerald-800 px-2 py-0.5 rounded rotate-[-6deg] opacity-70">
+                          [CAP RT {rtNumber}]
+                        </span>
+                      </div>
+                      <p className="font-bold underline uppercase">({templateNamaKetua})</p>
+                    </div>
+                  </div>
+                )}
+
+                {formatTandaTangan === 'Ketua RT Saja' && (
+                  <div className="flex justify-end text-xs sm:text-sm font-sans">
+                    <div className="text-center w-52 space-y-1">
+                      <p className="font-semibold">Ketua RT {rtNumber} / RW {rwNumber}</p>
+                      <div className="h-14 flex items-center justify-center">
+                        <span className="text-[10px] text-emerald-800 font-bold border-2 border-emerald-800 px-2 py-0.5 rounded rotate-[-6deg] opacity-70">
+                          [CAP RT {rtNumber}]
+                        </span>
+                      </div>
+                      <p className="font-bold underline uppercase">({templateNamaKetua})</p>
+                    </div>
+                  </div>
+                )}
+
+                {formatTandaTangan === 'RT, RW & Sekretaris' && (
+                  <div className="grid grid-cols-3 gap-2 text-center">
+                    <div className="space-y-1">
+                      <p className="font-semibold">Sekretaris RT</p>
+                      <div className="h-16"></div>
+                      <p className="font-bold underline uppercase text-[11px] sm:text-xs">(Hendro Wicaksono)</p>
+                    </div>
+
+                    <div className="space-y-1">
+                      <p className="font-semibold">Ketua RT {rtNumber}</p>
+                      <div className="h-14 flex items-center justify-center">
+                        <span className="text-[9px] text-emerald-800 font-bold border-2 border-emerald-800 px-1.5 py-0.5 rounded rotate-[-6deg] opacity-70">
+                          [CAP RT]
+                        </span>
+                      </div>
+                      <p className="font-bold underline uppercase text-[11px] sm:text-xs">({templateNamaKetua})</p>
+                    </div>
+
+                    <div className="space-y-1">
+                      <p className="font-semibold">Mengetahui, Ketua RW {rwNumber}</p>
+                      <div className="h-16"></div>
+                      <p className="font-bold underline uppercase text-[11px] sm:text-xs">(Ir. H. Sudirman)</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex justify-end space-x-3 pt-4 border-t print:hidden">
+              <button
+                type="button"
+                onClick={() => setShowImbauanPreviewModal(false)}
+                className="px-5 py-2.5 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold text-xs"
+              >
+                Tutup
+              </button>
+              <button
+                type="button"
+                onClick={() => window.print()}
+                className="px-6 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-lg shadow-emerald-600/30 flex items-center space-x-2"
+              >
+                <Printer className="w-4 h-4" />
+                <span>Cetak PDF Sekarang</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: Draft Surat */}
+      {showDraftModal && (
+        <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="w-full max-w-md bg-[#1e1e24] border border-gray-800 rounded-3xl p-5 space-y-4">
+            <div className="flex justify-between items-center pb-2 border-b border-gray-800">
+              <div className="flex items-center space-x-2 text-amber-400 font-bold text-base">
+                <Mail className="w-5 h-5" />
+                <span>Daftar Draft Surat</span>
+              </div>
+              <button onClick={() => setShowDraftModal(false)} className="p-1 rounded-lg text-gray-400 hover:text-white">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
+              {draftList.length === 0 ? (
+                <div className="text-center py-6 text-gray-500 text-xs">Belum ada draft tersimpan.</div>
+              ) : (
+                draftList.map((d) => (
+                  <div key={d.id} className="p-3 rounded-2xl bg-gray-900 border border-gray-800 space-y-1 text-xs">
+                    <div className="flex justify-between items-start">
+                      <span className="font-bold text-amber-400">{d.jenis}</span>
+                      <span className="text-[10px] text-gray-500">{d.tanggal}</span>
+                    </div>
+                    <p className="text-gray-300">Pemohon: <span className="font-semibold text-white">{d.pemohonNama}</span></p>
+                    <p className="text-gray-400 text-[11px] truncate">Keperluan: {d.keperluan}</p>
+                    <div className="flex justify-end space-x-2 pt-1">
+                      <button
+                        onClick={() => {
+                          setSuratJenis(d.jenis);
+                          setKeperluanSurat(d.keperluan);
+                          const matched = residents.find(r => r.nik === d.pemohonNik || r.nama === d.pemohonNama);
+                          if (matched) setSelectedPemohon(matched);
+                          setShowDraftModal(false);
+                        }}
+                        className="px-3 py-1 bg-amber-500/20 text-amber-300 rounded-lg text-[11px] font-semibold hover:bg-amber-500/30"
+                      >
+                        Gunakan Draft
+                      </button>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: Buku Surat In & Out */}
+      {showInOutModal && (
+        <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="w-full max-w-md bg-[#1e1e24] border border-gray-800 rounded-3xl p-5 space-y-4">
+            <div className="flex justify-between items-center pb-2 border-b border-gray-800">
+              <div className="flex items-center space-x-2 text-sky-400 font-bold text-base">
+                <Printer className="w-5 h-5" />
+                <span>Buku Agenda Surat (In & Out)</span>
+              </div>
+              <button onClick={() => setShowInOutModal(false)} className="p-1 rounded-lg text-gray-400 hover:text-white">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-2 text-xs">
+              <div className="p-3 rounded-2xl bg-gray-900 border border-gray-800 flex justify-between items-center">
+                <div>
+                  <span className="px-2 py-0.5 rounded-full text-[10px] bg-blue-500/20 text-blue-400 font-bold">Surat Keluar</span>
+                  <h4 className="font-bold text-white mt-1">042/RT.011/RW.04/X/2026</h4>
+                  <p className="text-[11px] text-gray-400">Pengantar SKCK • Pemohon: Budi Santoso</p>
+                </div>
+                <span className="text-[10px] text-gray-500">21 Oct 2026</span>
+              </div>
+
+              <div className="p-3 rounded-2xl bg-gray-900 border border-gray-800 flex justify-between items-center">
+                <div>
+                  <span className="px-2 py-0.5 rounded-full text-[10px] bg-emerald-500/20 text-emerald-400 font-bold">Surat Keluar</span>
+                  <h4 className="font-bold text-white mt-1">041/RT.011/RW.04/X/2026</h4>
+                  <p className="text-[11px] text-gray-400">Keterangan Domisili • Pemohon: Ahmad Fauzi</p>
+                </div>
+                <span className="text-[10px] text-gray-500">18 Oct 2026</span>
+              </div>
+            </div>
           </div>
         </div>
       )}
